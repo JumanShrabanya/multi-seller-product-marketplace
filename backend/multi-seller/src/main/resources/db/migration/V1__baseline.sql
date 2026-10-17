@@ -1,0 +1,1 @@
+-- Module 1 baseline. Domain tables are introduced in Module 2.
