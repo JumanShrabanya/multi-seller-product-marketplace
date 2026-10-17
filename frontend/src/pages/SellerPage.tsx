@@ -1,59 +1,44 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { fetchSellerListings } from '../api/seller'
 import { AddProductPanel } from '../components/seller/AddProductPanel'
 import { ListingRow } from '../components/seller/ListingRow'
 import { EmptyState, ErrorState, LoadingState } from '../components/states'
 import { StatusBadge } from '../components/StatusBadge'
+import type { Account } from '../api/types'
 import { useSession } from '../session/SessionProvider'
-import type { Seller } from '../api/types'
 
 const PAGE_SIZE = 20
 
 export function SellerPage() {
-  const { mode, sellerId, seller, sellersLoading, setMode } = useSession()
+  const { account, isSeller } = useSession()
 
-  if (mode !== 'SELLER') {
-    return (
-      <section className="page">
-        <EmptyState title="You are browsing as a buyer" message="Switch to Seller to manage listings." />
-        <button type="button" className="button" onClick={() => setMode('SELLER')}>
-          Switch to seller view
-        </button>
-      </section>
-    )
+  if (!account || !isSeller) {
+    return <Navigate to="/login" replace />
   }
 
-  if (sellersLoading) {
-    return (
-      <section className="page">
-        <LoadingState label="Loading seller…" />
-      </section>
-    )
-  }
-
-  if (sellerId === null || seller === null) {
-    return (
-      <section className="page">
-        <EmptyState title="No seller selected" message="Pick a seller from the header to continue." />
-      </section>
-    )
-  }
-
-  return <SellerDashboard sellerId={sellerId} seller={seller} />
+  return <SellerDashboard account={account} />
 }
 
-function SellerDashboard({ sellerId, seller }: { sellerId: number; seller: Seller }) {
+function SellerDashboard({ account }: { account: Account }) {
+  const { logout } = useSession()
   const [page, setPage] = useState(0)
   const [adding, setAdding] = useState(false)
-  const canWrite = seller.status === 'APPROVED'
+  const canWrite = account.sellerStatus === 'APPROVED'
 
   const listingsQuery = useQuery({
-    queryKey: ['seller-listings', sellerId, page],
-    queryFn: ({ signal }) => fetchSellerListings(sellerId, page, PAGE_SIZE, signal),
+    queryKey: ['seller-listings', account.userId, page],
+    queryFn: ({ signal }) => fetchSellerListings(account.token, page, PAGE_SIZE, signal),
     placeholderData: keepPreviousData,
   })
+
+  useEffect(() => {
+    if (listingsQuery.error instanceof ApiError && listingsQuery.error.status === 401) {
+      logout()
+    }
+  }, [listingsQuery.error, logout])
 
   const refresh = () => {
     void listingsQuery.refetch()
@@ -65,17 +50,17 @@ function SellerDashboard({ sellerId, seller }: { sellerId: number; seller: Selle
     <section className="page">
       <header className="seller-hero">
         <div className="page__header">
-          <h1>{seller.name}</h1>
+          <h1>{account.name}</h1>
           <p className="muted">
-            {seller.city} · Seller #{seller.id}
+            {account.email} · Seller #{account.userId}
           </p>
         </div>
-        <StatusBadge status={seller.status} />
+        {account.sellerStatus ? <StatusBadge status={account.sellerStatus} /> : null}
       </header>
 
       {!canWrite ? (
         <div className="notice notice--warn">
-          {seller.status === 'PENDING'
+          {account.sellerStatus === 'PENDING'
             ? 'This seller is awaiting approval. You can view listings, but adding, editing, or stopping them is disabled until an admin approves this seller.'
             : 'This seller was rejected, so listings cannot be changed.'}
         </div>
@@ -95,7 +80,7 @@ function SellerDashboard({ sellerId, seller }: { sellerId: number; seller: Selle
 
       {adding && canWrite ? (
         <AddProductPanel
-          sellerId={sellerId}
+          token={account.token}
           onClose={() => setAdding(false)}
           onCreated={() => {
             setAdding(false)
@@ -142,7 +127,7 @@ function SellerDashboard({ sellerId, seller }: { sellerId: number; seller: Selle
                     <ListingRow
                       key={listing.id}
                       listing={listing}
-                      sellerId={sellerId}
+                      token={account.token}
                       canWrite={canWrite}
                       onChanged={refresh}
                     />

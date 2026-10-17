@@ -13,7 +13,7 @@ export function Layout() {
       </main>
       <footer className="app-footer">
         <span>BajriX Multi-Seller Marketplace</span>
-        <span className="muted">Demo build — mock seller login, no real payments.</span>
+        <span className="muted">Demo build — email/password login, no real payments.</span>
       </footer>
     </div>
   )

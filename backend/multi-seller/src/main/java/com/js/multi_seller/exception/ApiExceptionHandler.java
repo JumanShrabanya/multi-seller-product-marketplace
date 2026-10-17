@@ -19,6 +19,11 @@ public class ApiExceptionHandler {
         return response(HttpStatus.BAD_REQUEST, "BAD_REQUEST", exception.getMessage(), List.of());
     }
 
+    @ExceptionHandler(UnauthorizedException.class)
+    ResponseEntity<ApiError> handleUnauthorized(UnauthorizedException exception) {
+        return response(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", exception.getMessage(), List.of());
+    }
+
     @ExceptionHandler(ForbiddenException.class)
     ResponseEntity<ApiError> handleForbidden(ForbiddenException exception) {
         return response(HttpStatus.FORBIDDEN, "FORBIDDEN", exception.getMessage(), List.of());

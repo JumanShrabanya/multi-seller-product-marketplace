@@ -35,9 +35,23 @@ Prerequisites: Docker Desktop, Java 21, and Node.js 20+.
    npm run dev
    ```
 
-   Open `http://localhost:5173`. Use the header **View as** switch to move between
-   the buyer experience and the seller dashboard. In seller mode a dropdown picks
-   which seller you are "logged in" as.
+   Open `http://localhost:5173`, click **Sign in**, and use one of the seeded
+   accounts below (buyers browse and compare; sellers manage only their own
+   listings).
+
+### Demo accounts
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Seller (approved) | `buildright@example.com` | `buildright123` |
+| Seller (approved) | `metro@example.com` | `metro123` |
+| Seller (approved) | `rajasthan@example.com` | `rajasthan123` |
+| Seller (pending) | `newhorizon@example.com` | `newhorizon123` |
+| Seller (rejected) | `clearance@example.com` | `clearance123` |
+| Buyer | `priya@example.com` | `priya123` |
+| Buyer | `amit@example.com` | `amit123` |
+
+Signing in with a wrong password returns `401` and the login box shows an error.
 
 ### Tests
 
@@ -83,9 +97,14 @@ docker-compose.yml     Postgres 16 only (the apps run from source)
 - **Errors** are returned in one shape via `@RestControllerAdvice`:
   `{ timestamp, status, code, message, fieldErrors[] }` with codes
   `BAD_REQUEST`, `VALIDATION_ERROR`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`.
-- **Mock auth:** the `X-Seller-Id` header is resolved into a `SellerContext`. Every
-  `/api/seller/**` call is scoped to that seller id; the header is required and
-  validated.
+- **Login (demo-grade, no Spring Security):** `POST /api/auth/login` matches an
+  email/password against a seeded seller or buyer account and returns an opaque
+  session token plus the account identity and (for sellers) approval status.
+  `/api/seller/**` calls send `Authorization: Bearer <token>`; the token is
+  exchanged for the account id, so a seller can only ever act as themselves and
+  another seller's listing returns `404`. Sessions live in an in-memory store
+  (lost on restart, single instance) — deliberate for a demo. Passwords are seeded
+  plain text; hashing is noted as a production gap, not implemented.
 - **Concurrency:** `PATCH` requires the current `version`; a stale value returns
   `409 Conflict`, and the DB `@Version` column is the final guard.
 
@@ -93,22 +112,25 @@ docker-compose.yml     Postgres 16 only (the apps run from source)
 
 | Method | Path | Purpose |
 | --- | --- | --- |
+| POST | `/api/auth/login` | Log in with `{ email, password }`; returns token + identity, or `401`. |
 | GET | `/api/products` | Buyer product list: `q`, `category`, `brand`, `minPrice`, `maxPrice`, `inStockOnly`, `sort` (`name`/`price_asc`/`price_desc`, default `name`), `page`, `size`. |
 | GET | `/api/products/{id}` | Product detail + buyable offers sorted by price. |
-| GET | `/api/seller/listings` | The current seller's listings (includes inactive). |
+| GET | `/api/seller/listings` | The current seller's listings (includes inactive). Requires Bearer token. |
 | POST | `/api/seller/listings` | Add an existing product to the seller's catalogue (reactivates if previously stopped). |
 | PATCH | `/api/seller/listings/{id}` | Update price/stock/MOQ (requires `version`). |
 | DELETE | `/api/seller/listings/{id}` | Stop selling (soft delete). |
 | GET | `/api/seller/products/search?q=` | Find catalogue products to list. |
-| GET | `/api/sellers/mock` | Dev-only seller list for the frontend switcher. |
 
 ### Frontend
 
-- **Routing** with React Router: `/` (catalogue), `/products/:id`, `/seller`.
+- **Routing** with React Router: `/` (catalogue), `/products/:id`, `/login`,
+  `/seller`.
 - A typed API client wraps `fetch`, throws a rich `ApiError`, and attaches the
-  `X-Seller-Id` header for seller calls.
-- **Seller identity is a mock role switcher** in the header (Buyer / Seller +
-  seller dropdown), persisted in `localStorage`. This stands in for real auth.
+  `Authorization: Bearer <token>` header for seller calls.
+- **Login is a real email/password form** (`/login`); the returned account (token,
+  role, name, seller status) is kept in `localStorage`. The header shows who is
+  signed in with a sign-out button, and `/seller` redirects to `/login` unless a
+  seller is authenticated. Sellers can only reach their own dashboard.
 - The buyer **filters and page live in the URL**, so a filtered view is shareable
   and survives refresh; text inputs are debounced before they update the URL.
 - The seller dashboard does **inline editing** with client-side validation that
@@ -121,7 +143,7 @@ docker-compose.yml     Postgres 16 only (the apps run from source)
 - A listing is visible to buyers only when the seller is `APPROVED`, the listing
   is `active`, and `stock >= min_order_qty`. Out-of-stock / below-MOQ listings are
   hidden; a product with no such offers shows as **Currently unavailable**.
-- `PENDING`/`REJECTED` sellers can sign in (mock) and view their listings but get
+- `PENDING`/`REJECTED` sellers can sign in and view their listings but get
   `403` on create/update/stop.
 - Accessing another seller's listing returns `404` (existence is not leaked).
 - Validation: `price > 0` (max 2 decimals), `stock >= 0`, `min_order_qty >= 1`,
@@ -139,12 +161,15 @@ docker-compose.yml     Postgres 16 only (the apps run from source)
   avoided deliberately, since scanning a large catalogue for facets is exactly the
   kind of query the scale notes warn about.
 - `PATCH` replaces price, stock, and MOQ together (no partial field patch).
-- `GET /api/sellers/mock` is a development convenience, not a production endpoint.
+- Login uses seeded, plain-text demo passwords and an in-memory session store; it
+  is meant to demonstrate the login + authorization flow, not to be production
+  authentication.
 
 ## Not implemented
 
-Intentionally out of scope per the brief: payments, checkout, RFQ flows, real
-authentication/authorization, email/SMS, and any mobile app. Sellers cannot create
+Intentionally out of scope per the brief: payments, checkout, RFQ flows,
+production-grade authentication (Spring Security, password hashing, refresh
+tokens, persistent sessions), email/SMS, and any mobile app. Sellers cannot create
 brand-new products, only list existing catalogue items.
 
 ## Future improvements
@@ -166,5 +191,6 @@ view, instead of computed per request. Product search would move from `pg_trgm` 
 the primary to a dedicated engine (**OpenSearch/Elasticsearch**) for relevance,
 facets, and typo tolerance. Buyer reads would use **read replicas and caching**
 (HTTP/CDN or Redis). Large tables (`seller_listing`) would be **partitioned**, and
-indexes reviewed against real query plans. The mock `X-Seller-Id` auth would be
-replaced with real identity and row-level authorization.
+indexes reviewed against real query plans. The in-memory session store and
+plain-text passwords would be replaced with real identity (hashed credentials,
+persistent sessions, row-level authorization).

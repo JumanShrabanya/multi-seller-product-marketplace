@@ -8,14 +8,14 @@ import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import { useToast } from '../ToastProvider'
 
 interface Props {
-  sellerId: number
+  token: string
   onClose: () => void
   onCreated: () => void
 }
 
 const EMPTY_DRAFT: ListingDraft = { price: '', stock: '', minOrderQty: '1' }
 
-export function AddProductPanel({ sellerId, onClose, onCreated }: Props) {
+export function AddProductPanel({ token, onClose, onCreated }: Props) {
   const toast = useToast()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
@@ -25,12 +25,12 @@ export function AddProductPanel({ sellerId, onClose, onCreated }: Props) {
   const [formError, setFormError] = useState<string | null>(null)
 
   const catalogueQuery = useQuery({
-    queryKey: ['catalogue', sellerId, debouncedSearch],
-    queryFn: ({ signal }) => searchCatalogue(sellerId, debouncedSearch, signal),
+    queryKey: ['catalogue', token, debouncedSearch],
+    queryFn: ({ signal }) => searchCatalogue(token, debouncedSearch, signal),
   })
 
   const createMutation = useMutation({
-    mutationFn: (input: CreateListingInput) => createListing(sellerId, input),
+    mutationFn: (input: CreateListingInput) => createListing(token, input),
     onSuccess: () => {
       toast.success('Product added to your catalogue')
       onCreated()

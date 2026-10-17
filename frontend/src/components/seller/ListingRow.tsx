@@ -10,7 +10,7 @@ import { useToast } from '../ToastProvider'
 
 interface Props {
   listing: SellerListing
-  sellerId: number
+  token: string
   canWrite: boolean
   onChanged: () => void
 }
@@ -23,7 +23,7 @@ function toDraft(listing: SellerListing): ListingDraft {
   }
 }
 
-export function ListingRow({ listing, sellerId, canWrite, onChanged }: Props) {
+export function ListingRow({ listing, token, canWrite, onChanged }: Props) {
   const toast = useToast()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<ListingDraft>(() => toDraft(listing))
@@ -33,7 +33,7 @@ export function ListingRow({ listing, sellerId, canWrite, onChanged }: Props) {
   const status = listingStatus(listing)
 
   const updateMutation = useMutation({
-    mutationFn: (input: UpdateListingInput) => updateListing(sellerId, listing.id, input),
+    mutationFn: (input: UpdateListingInput) => updateListing(token, listing.id, input),
     onSuccess: () => {
       toast.success('Listing updated')
       setEditing(false)
@@ -62,7 +62,7 @@ export function ListingRow({ listing, sellerId, canWrite, onChanged }: Props) {
   })
 
   const stopMutation = useMutation({
-    mutationFn: () => stopListing(sellerId, listing.id),
+    mutationFn: () => stopListing(token, listing.id),
     onSuccess: () => {
       toast.success('Stopped selling this product')
       setConfirmStop(false)
@@ -82,7 +82,7 @@ export function ListingRow({ listing, sellerId, canWrite, onChanged }: Props) {
         stock: listing.stock,
         minOrderQty: listing.minOrderQty,
       }
-      return createListing(sellerId, input)
+      return createListing(token, input)
     },
     onSuccess: () => {
       toast.success('Product re-listed')

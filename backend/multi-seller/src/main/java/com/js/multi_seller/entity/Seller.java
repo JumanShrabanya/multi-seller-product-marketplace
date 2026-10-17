@@ -20,6 +20,10 @@ public class Seller {
 
     private String city;
 
+    private String email;
+
+    private String password;
+
     @Enumerated(EnumType.STRING)
     private SellerStatus status;
 
@@ -36,6 +40,14 @@ public class Seller {
 
     public String getCity() {
         return city;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPassword() {
+        return password;
     }
 
     public SellerStatus getStatus() {

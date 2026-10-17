@@ -7,8 +7,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -28,9 +28,6 @@ class SellerListingApiIntegrationTest extends AbstractIntegrationTest {
     private static final String CREATE_BODY = "{\"productId\":10,\"price\":100.00,\"stock\":10,\"minOrderQty\":2}";
 
     @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
     private SellerListingRepository listingRepository;
 
     @BeforeEach
@@ -48,10 +45,10 @@ class SellerListingApiIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void requiresSellerHeader() throws Exception {
+    void requiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/seller/listings"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -75,7 +72,7 @@ class SellerListingApiIntegrationTest extends AbstractIntegrationTest {
     void stoppingThenReAddingReactivatesSameListing() throws Exception {
         long id = createListingId();
 
-        mockMvc.perform(delete("/api/seller/listings/{id}", id).header("X-Seller-Id", SELLER_ID))
+        mockMvc.perform(delete("/api/seller/listings/{id}", id).header(HttpHeaders.AUTHORIZATION, sellerBearer(SELLER_ID)))
                 .andExpect(status().isNoContent());
 
         createListing()
@@ -90,14 +87,14 @@ class SellerListingApiIntegrationTest extends AbstractIntegrationTest {
         long id = createListingId();
 
         mockMvc.perform(patch("/api/seller/listings/{id}", id)
-                        .header("X-Seller-Id", SELLER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, sellerBearer(SELLER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"price\":110.00,\"stock\":9,\"minOrderQty\":1,\"version\":0}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.version").value(1));
 
         mockMvc.perform(patch("/api/seller/listings/{id}", id)
-                        .header("X-Seller-Id", SELLER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, sellerBearer(SELLER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"price\":120.00,\"stock\":8,\"minOrderQty\":1,\"version\":0}"))
                 .andExpect(status().isConflict())
@@ -109,7 +106,7 @@ class SellerListingApiIntegrationTest extends AbstractIntegrationTest {
         long id = createListingId();
 
         mockMvc.perform(patch("/api/seller/listings/{id}", id)
-                        .header("X-Seller-Id", OTHER_SELLER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, sellerBearer(OTHER_SELLER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"price\":110.00,\"stock\":9,\"minOrderQty\":1,\"version\":0}"))
                 .andExpect(status().isNotFound());
@@ -118,7 +115,7 @@ class SellerListingApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     void pendingSellerCannotCreateListing() throws Exception {
         mockMvc.perform(post("/api/seller/listings")
-                        .header("X-Seller-Id", PENDING_SELLER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, sellerBearer(PENDING_SELLER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(CREATE_BODY))
                 .andExpect(status().isForbidden())
@@ -127,14 +124,14 @@ class SellerListingApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void pendingSellerCanStillReadOwnListings() throws Exception {
-        mockMvc.perform(get("/api/seller/listings").header("X-Seller-Id", PENDING_SELLER_ID))
+        mockMvc.perform(get("/api/seller/listings").header(HttpHeaders.AUTHORIZATION, sellerBearer(PENDING_SELLER_ID)))
                 .andExpect(status().isOk());
     }
 
     @Test
     void rejectsMinOrderGreaterThanStock() throws Exception {
         mockMvc.perform(post("/api/seller/listings")
-                        .header("X-Seller-Id", SELLER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, sellerBearer(SELLER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"productId\":10,\"price\":100.00,\"stock\":5,\"minOrderQty\":50}"))
                 .andExpect(status().isBadRequest());
@@ -143,7 +140,7 @@ class SellerListingApiIntegrationTest extends AbstractIntegrationTest {
     @Test
     void reportsFieldErrorsForInvalidPrice() throws Exception {
         mockMvc.perform(post("/api/seller/listings")
-                        .header("X-Seller-Id", SELLER_ID)
+                        .header(HttpHeaders.AUTHORIZATION, sellerBearer(SELLER_ID))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"productId\":10,\"price\":-1,\"stock\":5,\"minOrderQty\":1}"))
                 .andExpect(status().isBadRequest())
@@ -153,7 +150,7 @@ class SellerListingApiIntegrationTest extends AbstractIntegrationTest {
 
     private ResultActions createListing() throws Exception {
         return mockMvc.perform(post("/api/seller/listings")
-                .header("X-Seller-Id", SELLER_ID)
+                .header(HttpHeaders.AUTHORIZATION, sellerBearer(SELLER_ID))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(CREATE_BODY));
     }

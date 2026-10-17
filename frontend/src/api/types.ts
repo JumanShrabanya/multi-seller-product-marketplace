@@ -66,11 +66,15 @@ export type ProductSearchParams = {
 
 export type SellerStatus = 'APPROVED' | 'PENDING' | 'REJECTED'
 
-export interface Seller {
-  id: number
+export type UserRole = 'BUYER' | 'SELLER'
+
+export interface Account {
+  token: string
+  role: UserRole
+  userId: number
   name: string
-  city: string
-  status: SellerStatus
+  email: string
+  sellerStatus: SellerStatus | null
 }
 
 export interface SellerListing {

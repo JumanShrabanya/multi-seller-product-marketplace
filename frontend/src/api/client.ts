@@ -19,7 +19,7 @@ export class ApiError extends Error {
 interface RequestOptions {
   method?: string
   body?: unknown
-  sellerId?: number | null
+  token?: string | null
   signal?: AbortSignal
 }
 
@@ -28,8 +28,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json'
   }
-  if (options.sellerId != null) {
-    headers['X-Seller-Id'] = String(options.sellerId)
+  if (options.token) {
+    headers['Authorization'] = `Bearer ${options.token}`
   }
 
   let response: Response

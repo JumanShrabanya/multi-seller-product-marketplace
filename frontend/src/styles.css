@@ -165,76 +165,112 @@ a {
   font-weight: 600;
 }
 
-.role-switcher {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.role-switcher__label {
-  font-size: 0.78rem;
-  color: var(--muted);
-  font-weight: 500;
-}
-
-.segmented {
-  display: inline-flex;
-  padding: 3px;
-  gap: 2px;
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.segmented button {
-  border: 0;
-  background: transparent;
-  padding: 0.4rem 0.95rem;
-  font: inherit;
-  font-weight: 500;
-  font-size: 0.875rem;
-  cursor: pointer;
-  color: var(--muted);
-  border-radius: 7px;
-  transition: background 0.12s ease, color 0.12s ease;
-}
-
-.segmented button:hover {
-  color: var(--ink);
-}
-
-.segmented button.is-active {
-  background: var(--surface);
-  color: var(--ink);
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
-}
-
-.app-header__seller {
+.account {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  width: 100%;
-  padding: 0.5rem var(--page-pad);
-  background: var(--surface-alt);
-  border-top: 1px solid var(--border);
-  font-size: 0.875rem;
 }
 
-.seller-picker {
+.account__identity {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.account__name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.account__role {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--muted);
 }
 
-.seller-picker select {
-  padding: 0.35rem 0.6rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  font: inherit;
+/* ---------- Login ---------- */
+.page--narrow {
+  max-width: 30rem;
+  margin-inline: auto;
+}
+
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: clamp(1.5rem, 3vw, 2.25rem);
   background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.login-card h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login-form .button {
+  align-self: flex-start;
+}
+
+.demo-accounts {
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.demo-accounts__title {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.demo-accounts ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.demo-account {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
   color: var(--ink);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.demo-account:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.demo-account .muted {
+  font-size: 0.78rem;
 }
 
 /* ---------- Footer ---------- */

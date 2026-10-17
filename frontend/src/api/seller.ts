@@ -1,20 +1,16 @@
 import { apiRequest, buildQuery } from './client'
-import type { CatalogueProduct, PageResponse, Seller, SellerListing } from './types'
+import type { CatalogueProduct, PageResponse, SellerListing } from './types'
 
-export function fetchMockSellers(signal?: AbortSignal) {
-  return apiRequest<Seller[]>('/api/sellers/mock', { signal })
-}
-
-export function fetchSellerListings(sellerId: number, page: number, size: number, signal?: AbortSignal) {
+export function fetchSellerListings(token: string, page: number, size: number, signal?: AbortSignal) {
   return apiRequest<PageResponse<SellerListing>>(`/api/seller/listings${buildQuery({ page, size })}`, {
-    sellerId,
+    token,
     signal,
   })
 }
 
-export function searchCatalogue(sellerId: number, query: string, signal?: AbortSignal) {
+export function searchCatalogue(token: string, query: string, signal?: AbortSignal) {
   return apiRequest<CatalogueProduct[]>(`/api/seller/products/search${buildQuery({ q: query })}`, {
-    sellerId,
+    token,
     signal,
   })
 }
@@ -33,14 +29,14 @@ export interface UpdateListingInput {
   version: number
 }
 
-export function createListing(sellerId: number, input: CreateListingInput) {
-  return apiRequest<SellerListing>('/api/seller/listings', { method: 'POST', body: input, sellerId })
+export function createListing(token: string, input: CreateListingInput) {
+  return apiRequest<SellerListing>('/api/seller/listings', { method: 'POST', body: input, token })
 }
 
-export function updateListing(sellerId: number, id: number, input: UpdateListingInput) {
-  return apiRequest<SellerListing>(`/api/seller/listings/${id}`, { method: 'PATCH', body: input, sellerId })
+export function updateListing(token: string, id: number, input: UpdateListingInput) {
+  return apiRequest<SellerListing>(`/api/seller/listings/${id}`, { method: 'PATCH', body: input, token })
 }
 
-export function stopListing(sellerId: number, id: number) {
-  return apiRequest<void>(`/api/seller/listings/${id}`, { method: 'DELETE', sellerId })
+export function stopListing(token: string, id: number) {
+  return apiRequest<void>(`/api/seller/listings/${id}`, { method: 'DELETE', token })
 }

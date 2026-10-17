@@ -47,3 +47,12 @@ explainable so I can defend every line in the follow-up discussion.
    only asks for search/filters/sorting, and `similarity()` in an `ORDER BY` can't use
    the trigram index — so the fanciest feature was the least scalable part of the
    search. I dropped it and kept `name`/`price_asc`/`price_desc`.
+
+6. **Login keeps a server-side identity instead of a client-chosen id.** The first
+   auth design was a `X-Seller-Id` header the frontend could set freely, which meant
+   a logged-in seller could still send another seller's id. I replaced it with a
+   `POST /api/auth/login` that checks the seeded email/password and returns an opaque
+   token; the seller endpoints resolve that token to the account id, so a seller can
+   only ever act as themselves (a cross-seller write is a `404`). I kept it basic on
+   purpose — no Spring Security, an in-memory session store, and plain-text demo
+   passwords — and documented those as demo-only rather than production auth.
