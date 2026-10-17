@@ -7,18 +7,17 @@ import java.util.Locale;
 public enum ProductSort {
     PRICE_ASC,
     PRICE_DESC,
-    NAME,
-    RELEVANCE;
+    NAME;
 
     public static ProductSort from(String value) {
         if (value == null || value.isBlank()) {
-            return RELEVANCE;
+            return NAME;
         }
 
         try {
             return ProductSort.valueOf(value.trim().toUpperCase(Locale.ROOT).replace('-', '_'));
         } catch (IllegalArgumentException exception) {
-            throw new BadRequestException("sort must be one of: price_asc, price_desc, name, relevance");
+            throw new BadRequestException("sort must be one of: price_asc, price_desc, name");
         }
     }
 }

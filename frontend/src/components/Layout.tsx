@@ -4,8 +4,11 @@ import { Header } from './Header'
 export function Layout() {
   return (
     <div className="app">
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
       <Header />
-      <main className="app-content">
+      <main id="main" className="app-content">
         <Outlet />
       </main>
       <footer className="app-footer">

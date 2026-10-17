@@ -123,7 +123,6 @@ public class ProductRepository {
         if (criteria.query() != null) {
             filters.add("(LOWER(product.name) LIKE :query ESCAPE '\\' OR LOWER(product.brand) LIKE :query ESCAPE '\\')");
             parameters.addValue("query", LikePatterns.contains(criteria.query().toLowerCase()));
-            parameters.addValue("relevanceQuery", criteria.query().toLowerCase());
         }
         if (criteria.category() != null) {
             filters.add("LOWER(product.category) = :category");
@@ -153,8 +152,6 @@ public class ProductRepository {
             case PRICE_ASC -> "offer_summary.lowest_price ASC NULLS LAST, product.name ASC";
             case PRICE_DESC -> "offer_summary.lowest_price DESC NULLS LAST, product.name ASC";
             case NAME -> "product.name ASC, product.id ASC";
-            case RELEVANCE -> criteria.query() == null ? "product.name ASC, product.id ASC"
-                    : "similarity(lower(product.name), :relevanceQuery) DESC, product.name ASC";
         };
     }
 
