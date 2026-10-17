@@ -2,13 +2,15 @@
 
 Take-home project. Build a small, working, well-reasoned marketplace. The author must be able to explain every line, so keep code simple, readable, and consistent.
 
+**Status:** implemented. Backend modules 1–5 and frontend modules 6–9 are complete (52 backend tests passing; frontend production build passing).
+
 ## Stack & Layout (monorepo)
 
 ```
 /
-├── backend/            # Java 21, Spring Boot 3, Maven, PostgreSQL, Flyway
-├── frontend/           # React + Vite + TypeScript, Tailwind (or MUI), React Query
-├── docker-compose.yml  # postgres (+ optionally backend/frontend)
+├── backend/multi-seller/  # Java 21, Spring Boot 3, Maven, PostgreSQL, Flyway
+├── frontend/           # React 19 + Vite + TypeScript, TanStack Query, plain CSS
+├── docker-compose.yml  # postgres (the apps run from source)
 ├── README.md
 ├── AI_USAGE.md
 └── agent.md
@@ -17,15 +19,16 @@ Take-home project. Build a small, working, well-reasoned marketplace. The author
 ## Working Rules
 
 1. **One module at a time.** Finish, run, and test a module before starting the next. Stop and summarize after each module (what was built, how to verify, what's next).
-2. Don't add features beyond the brief (no payments, checkout, RFQ, real auth, email/SMS).
+2. Don't add features beyond the brief (no payments, checkout, RFQ, email/SMS). Auth is a lightweight demo login only — no Spring Security, password hashing, or persistent sessions.
 3. Keep it small: no speculative abstractions, no unused dependencies.
 4. After each module: update README notes (decisions/assumptions)
 5. Prefer boring, explainable choices over clever ones.
 
 ## Domain Model
 
-- **Seller**: `id, name, city, status (APPROVED | PENDING | REJECTED)`
-- **Product**: `id, name, brand, category, unit (e.g. "50 kg bag"), description` — the catalogue item, seller-independent.
+- **Seller**: `id, name, city, status (APPROVED | PENDING | REJECTED), email, password` (demo login credentials).
+- **Buyer**: `id, name, email, password` — a demo login account; buyers have no write actions.
+- **Product**: `id, name, brand, category, unit (e.g. "50 kg bag"), description` — the catalogue item, seller-independent. Read as plain rows via `JdbcTemplate` (no managed JPA `Product` entity).
 - **SellerListing**: `id, product_id, seller_id, price (NUMERIC(12,2)), stock (int), min_order_qty (int), active (bool), version (bigint), created_at, updated_at`
   - `UNIQUE (seller_id, product_id)` → no duplicate listings.
   - CHECKs: `price > 0`, `stock >= 0`, `min_order_qty >= 1`.
@@ -36,10 +39,10 @@ Take-home project. Build a small, working, well-reasoned marketplace. The author
 ## Business Rules (document in README)
 
 - Buyers only see listings where: seller `APPROVED` AND listing `active` AND `stock >= min_order_qty`. Out-of-stock listings are hidden from the offer list (product shows "Currently unavailable" if no offers).
-- Seller status: `PENDING`/`REJECTED` sellers cannot appear to buyers; they can still log in (mock) and see their own listings, but cannot create/modify listings unless `APPROVED` (reject with 403).
+- Seller status: `PENDING`/`REJECTED` sellers cannot appear to buyers; they can still log in and see their own listings, but cannot create/modify listings unless `APPROVED` (reject with 403).
 - "Stop selling" = soft delete (`active=false`), not row deletion. Re-adding reactivates the existing row instead of creating a duplicate.
 - Validation: price > 0 (max 2 decimals), stock >= 0, MOQ >= 1, MOQ should not exceed stock when stock > 0 (decide and document).
-- Authorization: seller identity comes from the `X-Seller-Id` header (mock). Every seller query/update is scoped by `seller_id`; accessing another seller's listing returns 404 (don't leak existence).
+- Authorization: `POST /api/auth/login` verifies a seeded email/password and returns an opaque session token. `/api/seller/**` requires `Authorization: Bearer <token>`, which the server resolves to the seller id. Every query/update is scoped by `seller_id`; accessing another seller's listing returns 404 (don't leak existence).
 - Concurrency: optimistic locking with `@Version` on `SellerListing`; client sends `version` on update; stale update → 409 Conflict with a clear message.
 
 ## API Conventions
@@ -50,7 +53,7 @@ Take-home project. Build a small, working, well-reasoned marketplace. The author
 - Layering: `controller → service → repository`. Business rules live in services only.
 - **Pagination everywhere** for lists (page/size with a max size cap). Prefer keyset pagination for the product list if time permits; otherwise offset with a documented note.
 - Avoid N+1 queries: fetch offer summaries (min price, seller count) in a single aggregated query, not per product.
-- Search: `q` (name/brand), `category`, `brand`, `minPrice`/`maxPrice`, `inStockOnly`, `sort` (price asc/desc, name, relevance).
+- Search: `q` (name/brand), `category`, `brand`, `minPrice`/`maxPrice`, `inStockOnly`, `sort` (`name`, `price_asc`, `price_desc`; relevance was dropped — see the README scale notes).
 
 ## Modules (build in this order)
 
@@ -71,13 +74,12 @@ Take-home project. Build a small, working, well-reasoned marketplace. The author
 - **Done when:** endpoints work against seed data; hidden sellers/listings never leak.
 
 ### Module 4 — Backend: Seller APIs
-- Mock auth filter/resolver reading `X-Seller-Id`; load seller, expose status.
+- `POST /api/auth/login` (seller or buyer) plus a resolver that reads `Authorization: Bearer <token>`, loads the seller, and exposes status.
 - `GET /api/seller/listings` (own, paginated, includes inactive)
 - `POST /api/seller/listings` (add existing product to catalogue; duplicate → 409 or reactivate)
 - `PATCH /api/seller/listings/{id}` (price, stock, MOQ; requires `version`)
 - `DELETE /api/seller/listings/{id}` (soft stop-selling)
 - `GET /api/seller/products/search?q=` (find catalogue products to list)
-- `GET /api/sellers/mock` (dev-only list for the frontend seller selector)
 - Optimistic locking + global error handling.
 - **Done when:** a seller cannot read or modify another seller's data; invalid input and stale versions return correct errors.
 
@@ -89,7 +91,8 @@ Only meaningful tests, no coverage chasing:
 - **Done when:** `mvn test` passes cleanly.
 
 ### Module 6 — Frontend: Foundation
-- Routing (`/`, `/products/:id`, `/seller`), API client (typed), React Query, layout with header and a **role switcher** (Buyer / Seller + seller dropdown; selected seller id stored in state/localStorage and sent as `X-Seller-Id`).
+- Routing (`/`, `/products/:id`, `/login`, `/seller`), typed API client, React Query, layout with a header showing the signed-in account.
+- A **login page** authenticates against the backend; the account (token, role, name, seller status) is stored in `localStorage` and the token is sent as `Authorization: Bearer <token>`. `/seller` redirects to `/login` unless a seller is authenticated.
 - Shared UI: loading, empty, and error states; toasts.
 
 ### Module 7 — Frontend: Buyer Experience
@@ -108,7 +111,7 @@ Only meaningful tests, no coverage chasing:
 - `AI_USAGE.md`: tools used, what for, and one concrete example of an AI suggestion that was changed/rejected (fill in honestly with the real example from the build).
 
 ## Definition of Done (overall)
-- `docker compose up` + one command each for backend/frontend runs everything.
+- `docker compose up -d postgres` plus the backend and frontend commands runs everything.
 - Seed data demonstrates all required scenarios.
 - All tests pass; no secrets or dead code committed.
 - README and AI_USAGE.md complete and truthful.

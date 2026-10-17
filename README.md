@@ -1,196 +1,146 @@
 # BajriX Multi-Seller Marketplace
 
-A small full-stack marketplace where many sellers can offer the same product at
-different prices, stock levels, and minimum order quantities. Buyers browse and
-compare offers; sellers manage their own listings.
+Many sellers can offer the same product at different prices, stock, and minimum
+order quantities. Buyers browse and compare offers; sellers manage only their own
+listings.
 
-- **Backend:** Java 21, Spring Boot 3.5, Spring Data JPA + `JdbcTemplate`, PostgreSQL 16, Flyway, Maven.
-- **Frontend:** React 19, TypeScript, Vite, TanStack Query, plain CSS.
+**Stack:** Java 21 · Spring Boot 3.5 (JPA + `JdbcTemplate`) · PostgreSQL 16 ·
+Flyway · Maven — React 19 · TypeScript · Vite · TanStack Query · plain CSS.
 
 ## How to run
 
-Prerequisites: Docker Desktop, Java 21, and Node.js 20+.
+Prerequisites: Docker, Java 21, Node.js 20+.
 
-1. **Database**
+```bash
+docker compose up -d postgres                        # 1. database (Postgres 16)
+cd backend/multi-seller && ./mvnw spring-boot:run    # 2. API on http://localhost:8080
+cd frontend && npm install && npm run dev            # 3. app on http://localhost:5173
+```
 
-   ```bash
-   docker compose up -d postgres
-   ```
+Windows: use `.\mvnw.cmd`. Flyway creates and seeds the schema on first backend start.
 
-2. **Backend** (listens on `http://localhost:8080`)
-
-   ```bash
-   cd backend/multi-seller
-   ./mvnw spring-boot:run        # Windows: .\mvnw.cmd spring-boot:run
-   ```
-
-   Flyway creates the schema and seeds sample data on first start. Health check:
-   `http://localhost:8080/actuator/health`.
-
-3. **Frontend** (listens on `http://localhost:5173`)
-
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-   Open `http://localhost:5173`, click **Sign in**, and use one of the seeded
-   accounts below (buyers browse and compare; sellers manage only their own
-   listings).
-
-### Demo accounts
+Open `http://localhost:5173`, click **Sign in**, and use a demo account:
 
 | Role | Email | Password |
 | --- | --- | --- |
 | Seller (approved) | `buildright@example.com` | `buildright123` |
-| Seller (approved) | `metro@example.com` | `metro123` |
-| Seller (approved) | `rajasthan@example.com` | `rajasthan123` |
 | Seller (pending) | `newhorizon@example.com` | `newhorizon123` |
-| Seller (rejected) | `clearance@example.com` | `clearance123` |
 | Buyer | `priya@example.com` | `priya123` |
-| Buyer | `amit@example.com` | `amit123` |
 
-Signing in with a wrong password returns `401` and the login box shows an error.
+Also seeded: `metro@example.com`/`metro123`, `rajasthan@example.com`/`rajasthan123`,
+`clearance@example.com`/`clearance123`, `amit@example.com`/`amit123`.
+A wrong password returns `401` and the login box shows an error.
 
 ### Tests
 
 ```bash
-cd backend/multi-seller
-./mvnw test        # Windows: .\mvnw.cmd test
+cd backend/multi-seller && ./mvnw test
 ```
 
-The integration and concurrency tests start a throwaway `postgres:16-alpine`
-container with Testcontainers, so Docker must be running.
+Integration and concurrency tests start a throwaway `postgres:16-alpine` container
+with Testcontainers, so Docker must be running.
 
 ## Architecture
 
 ```
-backend/multi-seller   Spring Boot app (Maven wrapper)
-  src/main/java/...    controller -> service -> repository
-  src/main/resources/db/migration   Flyway migrations (schema + seed)
-frontend               Vite + React + TypeScript app
-docker-compose.yml     Postgres 16 only (the apps run from source)
+backend/multi-seller   Spring Boot API (controller -> service -> repository)
+frontend               React + TypeScript app
+docker-compose.yml     Postgres 16 (the apps run from source)
 ```
 
-### Backend
-
-- **Layering** is `controller -> service -> repository`. Business rules live only
-  in services; controllers are thin and deal in DTOs (entities are never exposed).
-- **Two data-access styles on purpose:**
-  - Buyer reads are aggregate queries (lowest price + offer count per product)
-    written once with `NamedParameterJdbcTemplate` and a shared SQL visibility
-    predicate, which avoids N+1 lookups and keeps the SQL explicit.
-  - Seller writes go through Spring Data JPA entities with `@Version`
-    optimistic locking, so guarded updates follow the entity lifecycle.
-- **Product vs. SellerListing.** `product` is the catalogue item; `seller_listing`
-  links a seller to a product with price/stock/MOQ. `UNIQUE (seller_id, product_id)`
-  makes duplicate listings impossible.
-- **Stop selling is a soft delete** (`active = false`), and re-adding the same
-  product reactivates the existing row instead of inserting a duplicate.
-- **Search** uses PostgreSQL `pg_trgm` with a GIN index on the product name, plus
-  indexes on category, brand, seller, product, and a partial index for buyable
-  listings. Sort is limited to `name`/`price_asc`/`price_desc` — relevance ranking
-  was deliberately left out (it needs a search engine to be worth the cost; see
-  the scale notes). Offset pagination with a hard `size` cap (100) is used, and the
-  scale notes explain why a production system would move to keyset pagination.
-- **Errors** are returned in one shape via `@RestControllerAdvice`:
-  `{ timestamp, status, code, message, fieldErrors[] }` with codes
-  `BAD_REQUEST`, `VALIDATION_ERROR`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`.
-- **Login (demo-grade, no Spring Security):** `POST /api/auth/login` matches an
-  email/password against a seeded seller or buyer account and returns an opaque
-  session token plus the account identity and (for sellers) approval status.
-  `/api/seller/**` calls send `Authorization: Bearer <token>`; the token is
-  exchanged for the account id, so a seller can only ever act as themselves and
-  another seller's listing returns `404`. Sessions live in an in-memory store
-  (lost on restart, single instance) — deliberate for a demo. Passwords are seeded
-  plain text; hashing is noted as a production gap, not implemented.
-- **Concurrency:** `PATCH` requires the current `version`; a stale value returns
-  `409 Conflict`, and the DB `@Version` column is the final guard.
+- **Layering** is `controller -> service -> repository`. Business rules live in
+  services; controllers are thin and expose DTOs, never entities.
+- **Two data-access styles on purpose:** buyer reads are aggregate SQL
+  (`NamedParameterJdbcTemplate` — lowest price + offer count in one query, with a
+  shared visibility predicate, so no N+1); seller writes use JPA entities with
+  `@Version`.
+- **`product` vs. `seller_listing`:** the catalogue item vs. a seller's offer.
+  `UNIQUE (seller_id, product_id)` prevents duplicate listings.
+- **Stop selling is a soft delete** (`active = false`); re-adding the same product
+  reactivates the existing row.
+- **Search:** `pg_trgm` GIN index on product name plus category/brand/seller
+  indexes. Sort is `name`/`price_asc`/`price_desc`; offset pagination capped at 100.
+- **Login (demo-grade, no Spring Security):** `POST /api/auth/login` matches a
+  seeded email/password and returns an opaque token. Seller calls send
+  `Authorization: Bearer <token>`, which the server resolves to the seller id, so a
+  seller can only act as themselves (cross-seller access → `404`). Sessions are
+  in-memory and passwords are plain text — deliberate for a demo.
+- **Errors** share one shape: `{ timestamp, status, code, message, fieldErrors[] }`
+  with codes `BAD_REQUEST`, `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`,
+  `NOT_FOUND`, `CONFLICT`.
+- **Concurrency:** `PATCH` needs the current `version`; a stale value → `409`,
+  backed by the DB `@Version` column.
 
 ### API
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | POST | `/api/auth/login` | Log in with `{ email, password }`; returns token + identity, or `401`. |
-| GET | `/api/products` | Buyer product list: `q`, `category`, `brand`, `minPrice`, `maxPrice`, `inStockOnly`, `sort` (`name`/`price_asc`/`price_desc`, default `name`), `page`, `size`. |
+| GET | `/api/products` | Buyer list: `q`, `category`, `brand`, `minPrice`, `maxPrice`, `inStockOnly`, `sort`, `page`, `size`. |
 | GET | `/api/products/{id}` | Product detail + buyable offers sorted by price. |
-| GET | `/api/seller/listings` | The current seller's listings (includes inactive). Requires Bearer token. |
-| POST | `/api/seller/listings` | Add an existing product to the seller's catalogue (reactivates if previously stopped). |
+| GET | `/api/seller/listings` | Current seller's listings (includes inactive). |
+| POST | `/api/seller/listings` | Add an existing product (reactivates if previously stopped). |
 | PATCH | `/api/seller/listings/{id}` | Update price/stock/MOQ (requires `version`). |
 | DELETE | `/api/seller/listings/{id}` | Stop selling (soft delete). |
 | GET | `/api/seller/products/search?q=` | Find catalogue products to list. |
 
+Seller endpoints require the `Authorization: Bearer <token>` header.
+
 ### Frontend
 
-- **Routing** with React Router: `/` (catalogue), `/products/:id`, `/login`,
-  `/seller`.
-- A typed API client wraps `fetch`, throws a rich `ApiError`, and attaches the
-  `Authorization: Bearer <token>` header for seller calls.
-- **Login is a real email/password form** (`/login`); the returned account (token,
-  role, name, seller status) is kept in `localStorage`. The header shows who is
-  signed in with a sign-out button, and `/seller` redirects to `/login` unless a
-  seller is authenticated. Sellers can only reach their own dashboard.
-- The buyer **filters and page live in the URL**, so a filtered view is shareable
-  and survives refresh; text inputs are debounced before they update the URL.
-- The seller dashboard does **inline editing** with client-side validation that
-  mirrors the backend, maps `400` field errors to inputs, and handles `409` by
-  refreshing to the latest version with a toast. `PENDING`/`REJECTED` sellers see
-  a banner and all write actions are disabled.
+- Routes: `/` (catalogue), `/products/:id`, `/login`, `/seller`.
+- A typed `fetch` client throws a rich `ApiError` and attaches the Bearer token for
+  seller calls.
+- Login stores the account (token, role, name, seller status) in `localStorage`; the
+  header shows the signed-in user with sign-out, and `/seller` redirects to `/login`
+  unless a seller is signed in.
+- Buyer filters and page live in the URL (shareable, survive refresh); text inputs
+  are debounced.
+- The seller dashboard does inline editing with client-side validation that mirrors
+  the backend, maps `400` field errors to inputs, and refreshes on `409`;
+  `PENDING`/`REJECTED` sellers see a banner and all writes are disabled.
 
 ## Business rules
 
-- A listing is visible to buyers only when the seller is `APPROVED`, the listing
-  is `active`, and `stock >= min_order_qty`. Out-of-stock / below-MOQ listings are
-  hidden; a product with no such offers shows as **Currently unavailable**.
-- `PENDING`/`REJECTED` sellers can sign in and view their listings but get
-  `403` on create/update/stop.
-- Accessing another seller's listing returns `404` (existence is not leaked).
-- Validation: `price > 0` (max 2 decimals), `stock >= 0`, `min_order_qty >= 1`,
-  and `min_order_qty <= stock` when `stock > 0`.
+- A listing is visible to buyers only when the seller is `APPROVED`, the listing is
+  `active`, and `stock >= min_order_qty`; otherwise the product shows
+  **Currently unavailable**.
+- `PENDING`/`REJECTED` sellers can sign in and view their listings but get `403` on
+  create/update/stop.
+- Another seller's listing returns `404` (existence is not leaked).
+- Validation: `price > 0` (max 2 decimals), `stock >= 0`, `min_order_qty >= 1`, and
+  `min_order_qty <= stock` when `stock > 0`.
 
 ## Assumptions
 
-- Local development uses the non-secret Postgres credentials in `docker-compose.yml`.
-- The backend allows browser requests from `http://localhost:5173` (override with `CORS_ALLOWED_ORIGIN`).
-- Sellers add **existing catalogue products** to their catalogue (create a listing);
-  creating brand-new products is an admin concern outside this brief.
-- MOQ may exceed stock only when stock is `0`, because the listing is not buyable
-  either way.
-- Category and brand are free-text filters. A "list all categories" endpoint was
-  avoided deliberately, since scanning a large catalogue for facets is exactly the
-  kind of query the scale notes warn about.
-- `PATCH` replaces price, stock, and MOQ together (no partial field patch).
-- Login uses seeded, plain-text demo passwords and an in-memory session store; it
-  is meant to demonstrate the login + authorization flow, not to be production
-  authentication.
+- Local Postgres credentials come from `docker-compose.yml` (non-secret).
+- CORS allows `http://localhost:5173` (override with `CORS_ALLOWED_ORIGIN`).
+- Sellers list **existing catalogue products**; creating new products is an admin
+  concern outside the brief.
+- MOQ may exceed stock only when `stock` is `0` (the listing is not buyable anyway).
+- Category and brand are free-text filters — no facets endpoint, on purpose.
+- `PATCH` replaces price, stock, and MOQ together (no partial patch).
+- Login is demo-only: seeded plain-text passwords and in-memory sessions.
 
 ## Not implemented
 
-Intentionally out of scope per the brief: payments, checkout, RFQ flows,
-production-grade authentication (Spring Security, password hashing, refresh
-tokens, persistent sessions), email/SMS, and any mobile app. Sellers cannot create
-brand-new products, only list existing catalogue items.
+Per the brief: payments, checkout, RFQ, production-grade auth (Spring Security,
+password hashing, persistent sessions), email/SMS, and any mobile app. Sellers
+cannot create brand-new products.
 
 ## Future improvements
 
-- Containerize the backend and frontend so the whole stack runs with one
-  `docker compose up`.
-- Add a facets/autocomplete endpoint (or search engine) to power category/brand
-  dropdowns instead of free-text inputs.
-- Seed-data admin tooling, and a small product-creation flow for admins.
-- Paginate seller listings with keyset pagination and add bulk edit.
+- One-command `docker compose up` for the whole stack.
+- A facets/autocomplete endpoint for category/brand.
+- Admin seed tooling and a product-creation flow.
+- Keyset pagination and bulk edit for seller listings.
 
 ## Scale reconsiderations
 
-For roughly 1M products, 100k sellers, and 10M listings the current approach would
-need to change. Offset pagination degrades (`OFFSET` scans skipped rows) — use
-**keyset/seek pagination** on an indexed sort key. Aggregate offer summaries would
-be **precomputed or denormalized** (updated on write) or served from a materialized
-view, instead of computed per request. Product search would move from `pg_trgm` on
-the primary to a dedicated engine (**OpenSearch/Elasticsearch**) for relevance,
-facets, and typo tolerance. Buyer reads would use **read replicas and caching**
-(HTTP/CDN or Redis). Large tables (`seller_listing`) would be **partitioned**, and
-indexes reviewed against real query plans. The in-memory session store and
-plain-text passwords would be replaced with real identity (hashed credentials,
-persistent sessions, row-level authorization).
+At roughly 1M products / 100k sellers / 10M listings: offset pagination degrades, so
+move to **keyset pagination**; precompute or denormalize offer summaries (or use a
+materialized view) instead of aggregating per request; move search to a dedicated
+engine (**OpenSearch/Elasticsearch**) for relevance and facets; add **read replicas
+and caching**; **partition** `seller_listing`; review indexes against real query
+plans. The in-memory session store and plain-text passwords would be replaced with
+real identity (hashed credentials, persistent sessions, row-level authorization).
