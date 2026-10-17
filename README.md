@@ -11,21 +11,26 @@ Flyway · Maven — React 19 · TypeScript · Vite · TanStack Query · plain CS
 
 Prerequisites: Docker Desktop, Java 21, and Node.js 20+.
 
-1. **Database**
+1. **Database** — starts an empty PostgreSQL 16 (no tables yet)
 
    ```bash
    docker compose up -d postgres
    ```
 
-2. **Backend** (listens on `http://localhost:8080`)
+   Connection details (from `docker-compose.yml`): `localhost:5432`, database,
+   user, and password are all `marketplace`. To wipe and reset later, run
+   `docker compose down -v` and start again.
+
+2. **Backend** (listens on `http://localhost:8080`) — this creates and seeds the schema
 
    ```bash
    cd backend/multi-seller
    ./mvnw spring-boot:run        # Windows: .\mvnw.cmd spring-boot:run
    ```
 
-   Flyway creates the schema and seeds sample data on first start. Health check:
-   `http://localhost:8080/actuator/health`.
+   On first start Flyway runs the migrations (`V1`–`V4`): it creates the tables and
+   inserts the sample data and demo accounts. The database is only seeded **after**
+   this step. Health check: `http://localhost:8080/actuator/health`.
 
 3. **Frontend** (listens on `http://localhost:5173`)
 
