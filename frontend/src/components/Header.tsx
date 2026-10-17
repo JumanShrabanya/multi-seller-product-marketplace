@@ -9,7 +9,12 @@ export function Header() {
     <header className="app-header">
       <div className="app-header__bar">
         <NavLink to="/" className="brand">
-          BajriX <span>Marketplace</span>
+          <span className="brand__mark" aria-hidden="true">
+            B
+          </span>
+          <span className="brand__text">
+            BajriX <span className="brand__sub">Marketplace</span>
+          </span>
         </NavLink>
 
         <nav className="app-nav">

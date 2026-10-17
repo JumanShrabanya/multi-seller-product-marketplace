@@ -60,31 +60,44 @@ export function ProductDetailPage() {
 
   return (
     <section className="page">
-      <Link to="/" className="text-link">
-        ← Back to products
-      </Link>
+      <nav className="breadcrumb" aria-label="Breadcrumb">
+        <Link to="/">Products</Link>
+        <span aria-hidden="true">/</span>
+        <span className="breadcrumb__current">{product.name}</span>
+      </nav>
 
-      <header className="page__header">
-        <div className="product-card__meta">
-          <span className="tag">{product.category}</span>
-          <span className="muted">{product.brand}</span>
+      <article className="product-hero">
+        <div>
+          <div className="product-card__meta">
+            <span className="tag">{product.category}</span>
+            <span className="muted">{product.brand}</span>
+          </div>
+          <h1>{product.name}</h1>
+          <p className="muted">{product.unit}</p>
+          {product.description ? <p className="product-description">{product.description}</p> : null}
         </div>
-        <h1>{product.name}</h1>
-        <p className="muted">{product.unit}</p>
-      </header>
 
-      {product.description ? <p className="product-description">{product.description}</p> : null}
+        <aside className="product-hero__aside">
+          {product.currentlyUnavailable ? (
+            <>
+              <span className="badge badge--rejected">Currently unavailable</span>
+              <span className="muted">No approved seller has this in stock right now.</span>
+            </>
+          ) : (
+            <>
+              <span className="muted">Lowest price</span>
+              <span className="product-hero__price">
+                {product.lowestPrice !== null ? formatPrice(product.lowestPrice) : '—'}
+              </span>
+              <span className="muted">
+                from {product.offerCount} seller{product.offerCount === 1 ? '' : 's'}
+              </span>
+            </>
+          )}
+        </aside>
+      </article>
 
-      {product.currentlyUnavailable ? (
-        <div className="notice notice--warn">
-          This product is currently unavailable — no approved seller has it in stock right now.
-        </div>
-      ) : (
-        <p className="muted">
-          Available from {product.offerCount} seller{product.offerCount === 1 ? '' : 's'} · lowest price{' '}
-          <strong>{product.lowestPrice !== null ? formatPrice(product.lowestPrice) : '—'}</strong>
-        </p>
-      )}
+      <h2 className="section-title">Seller offers</h2>
 
       {product.offers.length === 0 ? (
         <EmptyState title="No offers available" message="Check back later — no seller currently offers this product." />

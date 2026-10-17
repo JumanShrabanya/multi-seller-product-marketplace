@@ -127,10 +127,20 @@ export function ProductsPage() {
 
   return (
     <section className="page">
-      <header className="page__header">
-        <h1>Products</h1>
-        <p className="muted">Compare offers from every approved seller in one place.</p>
-      </header>
+      <div className="hero">
+        <div>
+          <h1 className="hero__title">Construction and home-building materials, from local sellers</h1>
+          <p className="hero__subtitle">
+            Compare price, stock and minimum order quantity across every approved seller in one place.
+          </p>
+        </div>
+        <div className="hero__stats">
+          <div className="stat">
+            <span className="stat__value">{data?.totalElements ?? '—'}</span>
+            <span className="stat__label">{hasFilters ? 'matching products' : 'products listed'}</span>
+          </div>
+        </div>
+      </div>
 
       <div className="filters">
         <label className="field field--search">

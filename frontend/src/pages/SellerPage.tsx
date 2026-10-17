@@ -63,11 +63,13 @@ function SellerDashboard({ sellerId, seller }: { sellerId: number; seller: Selle
 
   return (
     <section className="page">
-      <header className="page__header">
-        <h1>{seller.name}</h1>
-        <p className="muted">
-          {seller.city} · Seller #{seller.id}
-        </p>
+      <header className="seller-hero">
+        <div className="page__header">
+          <h1>{seller.name}</h1>
+          <p className="muted">
+            {seller.city} · Seller #{seller.id}
+          </p>
+        </div>
         <StatusBadge status={seller.status} />
       </header>
 
@@ -79,13 +81,17 @@ function SellerDashboard({ sellerId, seller }: { sellerId: number; seller: Selle
         </div>
       ) : null}
 
-      {canWrite ? (
-        <div className="toolbar">
+      <div className="toolbar">
+        <div className="toolbar__title">
+          <h2 className="section-title">Your listings</h2>
+          {data ? <span className="muted">{data.totalElements} total</span> : null}
+        </div>
+        {canWrite ? (
           <button type="button" className="button" onClick={() => setAdding((current) => !current)}>
             {adding ? 'Close' : 'Add product'}
           </button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {adding && canWrite ? (
         <AddProductPanel
