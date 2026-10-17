@@ -2,7 +2,7 @@
 
 ## Tools used
 
-- An AI coding assistant (opencode CLI) driving the implementation.
+- An AI coding assistant (opencode CLI) & and Codex CLI driving the implementation.
 - Framework scaffolding from the standard Spring Initializr and Vite templates.
 
 ## What I primarily used it for
