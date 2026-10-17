@@ -9,36 +9,59 @@ Flyway · Maven — React 19 · TypeScript · Vite · TanStack Query · plain CS
 
 ## How to run
 
-Prerequisites: Docker, Java 21, Node.js 20+.
+Prerequisites: Docker Desktop, Java 21, and Node.js 20+.
 
-```bash
-docker compose up -d postgres                        # 1. database (Postgres 16)
-cd backend/multi-seller && ./mvnw spring-boot:run    # 2. API on http://localhost:8080
-cd frontend && npm install && npm run dev            # 3. app on http://localhost:5173
-```
+1. **Database**
 
-Windows: use `.\mvnw.cmd`. Flyway creates and seeds the schema on first backend start.
+   ```bash
+   docker compose up -d postgres
+   ```
 
-Open `http://localhost:5173`, click **Sign in**, and use a demo account:
+2. **Backend** (listens on `http://localhost:8080`)
+
+   ```bash
+   cd backend/multi-seller
+   ./mvnw spring-boot:run        # Windows: .\mvnw.cmd spring-boot:run
+   ```
+
+   Flyway creates the schema and seeds sample data on first start. Health check:
+   `http://localhost:8080/actuator/health`.
+
+3. **Frontend** (listens on `http://localhost:5173`)
+
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+   Open `http://localhost:5173`, click **Sign in**, and use one of the seeded
+   accounts below (buyers browse and compare; sellers manage only their own
+   listings).
+
+### Demo accounts
 
 | Role | Email | Password |
 | --- | --- | --- |
 | Seller (approved) | `buildright@example.com` | `buildright123` |
+| Seller (approved) | `metro@example.com` | `metro123` |
+| Seller (approved) | `rajasthan@example.com` | `rajasthan123` |
 | Seller (pending) | `newhorizon@example.com` | `newhorizon123` |
+| Seller (rejected) | `clearance@example.com` | `clearance123` |
 | Buyer | `priya@example.com` | `priya123` |
+| Buyer | `amit@example.com` | `amit123` |
 
-Also seeded: `metro@example.com`/`metro123`, `rajasthan@example.com`/`rajasthan123`,
-`clearance@example.com`/`clearance123`, `amit@example.com`/`amit123`.
-A wrong password returns `401` and the login box shows an error.
+Signing in with a wrong password returns `401` and the login box shows an error.
 
 ### Tests
 
 ```bash
-cd backend/multi-seller && ./mvnw test
+cd backend/multi-seller
+./mvnw test        # Windows: .\mvnw.cmd test
 ```
 
-Integration and concurrency tests start a throwaway `postgres:16-alpine` container
-with Testcontainers, so Docker must be running.
+The integration and concurrency tests start a throwaway `postgres:16-alpine`
+container with Testcontainers, so Docker must be running.
 
 ## Architecture
 
