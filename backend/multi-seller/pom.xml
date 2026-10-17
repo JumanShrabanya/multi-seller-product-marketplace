@@ -15,6 +15,7 @@
 	<description>BajriX multi-seller product marketplace backend</description>
 	<properties>
 		<java.version>21</java.version>
+		<testcontainers.version>1.21.4</testcontainers.version>
 	</properties>
 	<dependencies>
 		<dependency>

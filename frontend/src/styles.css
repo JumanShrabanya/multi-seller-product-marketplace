@@ -1,4 +1,371 @@
-:root { font-family: Inter, system-ui, sans-serif; color: #1f2937; background: #f8fafc; }
-body { margin: 0; }
-main { max-width: 960px; margin: 4rem auto; padding: 0 1.5rem; }
-h1 { margin-bottom: 0.5rem; }
+:root {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text: #1f2937;
+  --color-muted: #64748b;
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-success: #15803d;
+  --color-success-bg: #dcfce7;
+  --color-warn: #b45309;
+  --color-warn-bg: #fef3c7;
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fee2e2;
+  --radius: 10px;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 0.25rem;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-content {
+  flex: 1;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.app-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Header */
+.app-header {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-header__bar {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0.85rem 1.5rem;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-decoration: none;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.brand span {
+  color: var(--color-primary);
+}
+
+.app-nav {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+}
+
+.app-nav a {
+  text-decoration: none;
+  color: var(--color-muted);
+  font-weight: 500;
+  padding: 0.25rem 0;
+  border-bottom: 2px solid transparent;
+}
+
+.app-nav a.active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-primary);
+}
+
+.role-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.role-switcher__label {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.segmented button {
+  border: 0;
+  background: var(--color-surface);
+  padding: 0.35rem 0.85rem;
+  font: inherit;
+  cursor: pointer;
+  color: var(--color-muted);
+}
+
+.segmented button.is-active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.app-header__seller {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1.5rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+.seller-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.seller-picker select {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font: inherit;
+  background: var(--color-surface);
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge--approved {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge--pending {
+  background: var(--color-warn-bg);
+  color: var(--color-warn);
+}
+
+.badge--rejected {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* Pages */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.page__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+.text-link {
+  align-self: flex-start;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+/* States */
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+.state__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.state__message {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.state--error .state__title {
+  color: var(--color-danger);
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Buttons */
+.button {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  background: var(--color-primary);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.button:hover {
+  background: var(--color-primary-dark);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button--ghost {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+}
+
+.button--danger {
+  background: var(--color-danger);
+}
+
+/* Notices */
+.notice {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  border: 1px solid transparent;
+}
+
+.notice--warn {
+  background: var(--color-warn-bg);
+  color: var(--color-warn);
+  border-color: var(--color-warn-bg);
+}
+
+.notice--error {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* Toasts */
+.toast-region {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 100;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 240px;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--color-text);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+  font-size: 0.9rem;
+  animation: toast-in 0.15s ease-out;
+}
+
+.toast--success {
+  background: var(--color-success);
+}
+
+.toast--error {
+  background: var(--color-danger);
+}
+
+.toast button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (max-width: 640px) {
+  .app-header__bar {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+}

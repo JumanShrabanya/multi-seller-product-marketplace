@@ -21,7 +21,17 @@ The backend health check is available at `http://localhost:8080/actuator/health`
 - Mock authentication resolves the `X-Seller-Id` header into a `SellerContext` with an MVC `HandlerMethodArgumentResolver`; every `/api/seller/**` endpoint requires and validates the header.
 - Paginated endpoints share one generic `PageResponse<T>` shape (`content, page, size, totalElements, totalPages`).
 - Query strings are escaped before use in `LIKE`, so a user-typed `%` or `_` is treated literally.
+- Automated tests: fast unit tests for the service rules and Testcontainers-backed integration tests for the real SQL visibility rules, pagination, and optimistic locking. Testcontainers is pinned to 1.21.4 because 1.21.3 negotiates a Docker API version that Docker Engine 29 rejects (minimum 1.44).
 - The React app uses Vite, TypeScript, and React Query. UI styling will stay deliberately lightweight unless a later module needs more.
+
+## Tests
+
+Run `cd backend/multi-seller; .\mvnw.cmd test`. The integration tests start a throwaway `postgres:16-alpine` container via Testcontainers, so Docker must be running. They cover:
+
+- Service unit tests: pagination/price/sort validation, MOQ rules, duplicate handling, seller status rules, and ownership enforcement.
+- Buyer API integration tests: seller/listing visibility, search (including literal `%`/`_`), category/brand/price filters, sorting, and pagination.
+- Seller API integration tests: create, duplicate 409, stop/re-add reactivation, stale-version 409, cross-seller 404, and non-approved 403.
+- A concurrency test that races two updates on one listing and asserts exactly one succeeds while the other fails with the optimistic-locking exception.
 
 ## Assumptions
 
@@ -37,7 +47,7 @@ The backend health check is available at `http://localhost:8080/actuator/health`
 
 ## Not implemented
 
-Real authentication, the marketplace screens, and automated tests are introduced in later modules.
+Real authentication and the marketplace screens are introduced in later modules.
 
 ## Future improvements
 
